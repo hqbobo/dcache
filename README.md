@@ -9,7 +9,7 @@ main function as below
 1. support redis and redis cluster mode  
 2. support local cache. all set operation will remian a copy of data in memory(with timeout).
 3. All dcache client will get a copy of data after set opertion and save in their own memory(with timeout).
-4. All data has been marshel into josn, feel free to store struct stuff
+4. All data has been marshelled into json, feel free to store struct stuff
 5. Set your own logger and TextSerialize
 
 
