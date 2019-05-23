@@ -24,23 +24,25 @@ type publisher struct {
 }
 
 type RedisCache struct {
-	pool *redis.Pool
-	ip   string
-	port int
-	pass string
-	db   int
-	name string
-	mem  *MemCache
-	text TextSerialize
+	pool   *redis.Pool
+	ip     string
+	port   int
+	pass   string
+	db     int
+	name   string
+	mem    *MemCache
+	text   TextSerialize
+	logger Logger
 }
 
-func newRedisCache(ip string, port int, pass string, db int, poolsize int, text TextSerialize) *RedisCache {
+func newRedisCache(ip string, port int, pass string, db int, poolsize int, text TextSerialize, logger Logger) *RedisCache {
 	s := new(RedisCache)
 	s.ip = ip
 	s.pass = pass
 	s.port = port
 	s.db = db
 	s.name = encrypt.GetRandomString(16)
+	s.logger = logger
 	s.pool = &redis.Pool{
 		// Other pool configuration not shown in this example.
 		MaxIdle:     poolsize,

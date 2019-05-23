@@ -10,37 +10,72 @@ main function as below
 2. support local cache. all set operation will remian a copy of data in memory(with timeout).
 3. All dcache client will get a copy of data after set opertion and save in their own memory(with timeout).
 4. All data has been marshel into josn, feel free to store struct stuff
+5. Set your own logger and TextSerialize
 
-## Functions  
 
-> Create new picture with Configure
- 
-`pic := text2pic.NewTextPicture(text2pic.Configure{Width: 720, BgColor:text2pic.ColorWhite})`
+##Detail
+> Option
+```$xslt
+type Options struct {
+	Ip          string        //redis server ip
+	Port        int           //redis server port
+	Pass        string        //redis server password
+	Db          int           //redis server db
+	PoolSize    int           //redis server clientpool size
+	ClusterMode bool          //redis server running cluster mode?
+	Serialize   TextSerialize //interface used to marshal object into text
+	Logger      Logger        //interface used for log
+}
+```
 
-> Add text line to picture with font, color and padding 
+> TextSerialize
 
-`pic.AddTextLine(" The Turkish lira plunged as much as 11% against the dollar", 13, f, text2pic.ColorBlue, text2pic.Padding{Left: 20, Right: 20, Bottom: 30})`
+you can design your own TextSerialize if speed is concerned
+```$xslt
+type TextSerialize interface {
+	Marshal(o interface{}) (string, error)
+	Unmarshal(data []byte, v interface{}) error
+}
+```
 
-> Add picture  io.reader is required and padding as well
+> Logger
 
-`pic.AddPictureLine(file, text2pic.Padding{Bottom: 20})`
-
-> Draw it on io.writer. TypePng and TypeJpeg are supported
-
-`pic.Draw(writer, text2pic.TypeJpeg)`
+fit to the log system that you are familiar with
+```$xslt
+type Logger interface {
+	Debug(v ...interface{})
+	Info(v ...interface{})
+	Notice(v ...interface{})
+	Warn(v ...interface{})
+	Error(v ...interface{})
+	Panic(v ...interface{})
+}
+```
 
 ## Example  
-> 
+> [Source Code](https://github.com/hqbobo/dcache/example)  see in the example directory
 ```
 package main
 
 import (
-	"fmt"
-
+	"github.com/hqbobo/dcache"
 )
 
 func main() {
+	dcache.Init(dcache.Options{
+		Ip:          "127.0.0.1",
+		Port:        6379,
+		Pass:        "",
+		Db:          1,
+		PoolSize:    10,
+		ClusterMode: false,
+	})
+	var val string
+	dcache.GetCache().Get("aaaa", &val)
+	dcache.GetCache().Set("aaaa", "bbbb", 100)
+	dcache.GetCache().Get("aaaa", &val)
+	select {}
 
-	
 }
+
 ```

@@ -2,7 +2,6 @@ package dcache
 
 import (
 	"fmt"
-	"github.com/hqbobo/log"
 	"gopkg.in/redis.v3"
 	"libs/encrypt"
 	"net"
@@ -20,14 +19,16 @@ type RedisClusterCache struct {
 	name     string
 	mem      *MemCache
 	text     TextSerialize
+	logger 	Logger
 }
 
-func newRedisClusterCache(ip string, port int, pass string, db int, poolsize int, text TextSerialize) *RedisClusterCache {
+func newRedisClusterCache(ip string, port int, pass string, db int, poolsize int, text TextSerialize, logger Logger) *RedisClusterCache {
 	s := new(RedisClusterCache)
 	s.ip = ip
 	s.pass = pass
 	s.port = port
 	s.db = db
+	s.logger =logger
 	s.name = encrypt.GetRandomString(16)
 	s.cli = redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", ip, port),
@@ -53,14 +54,14 @@ func (this *RedisClusterCache) subscribe() {
 new:
 	r, e := this.cli.Subscribe(redis_sync_chan)
 	if e != nil {
-		log.Warn("redis sync failed:", e)
+		this.logger.Warn("redis sync failed:", e)
 		time.Sleep(time.Second)
 		goto new
 	}
 	for {
 		v, e := r.ReceiveMessage()
 		if e != nil {
-			log.Warn("Receive failed:", e)
+			this.logger.Warn("Receive failed:", e)
 			time.Sleep(time.Second)
 			goto new
 		}
@@ -74,7 +75,7 @@ new:
 				}
 			}
 		} else {
-			log.Warn(e)
+			this.logger.Warn(e)
 		}
 	}
 }
@@ -90,13 +91,13 @@ func (this *RedisClusterCache) publish(key, val string, ttl int, act int) {
 	//转为字符串
 	s, e := this.text.Marshal(p)
 	if e != nil {
-		log.Warn(e)
+		this.logger.Warn(e)
 		return
 	}
 
 	r := this.cli.Publish(redis_sync_chan, s)
 	if r.Err() != nil {
-		log.Warn("Publish error:", r.Err())
+		this.logger.Warn("Publish error:", r.Err())
 	}
 }
 
@@ -105,17 +106,17 @@ func (this *RedisClusterCache) Get(key string, data interface{}) bool {
 	if !this.mem.Get(key, &s) {
 		status := this.cluster.Get(key)
 		if status.Err() != nil {
-			log.Debug("key:[", key, "]notfound->", status.Err())
+			this.logger.Debug("key:[", key, "]notfound->", status.Err())
 			return false
 		}
 		s = status.Val()
 		if ttl := this.cluster.TTL(key); ttl.Err() == nil {
 			//设置本地内存
 			if e := this.text.Unmarshal([]byte(s), data); e != nil {
-				log.Warn(e)
+				this.logger.Warn(e)
 				return false
 			}
-			log.Debug("load:", key, " ttl[", ttl.Val(), ":", int(ttl.Val()/time.Second), "] from redis:")
+			this.logger.Debug("load:", key, " ttl[", ttl.Val(), ":", int(ttl.Val()/time.Second), "] from redis:")
 			//内存提前5秒超时
 			return this.mem.Set(key, s, int(ttl.Val()/time.Second)-5)
 		}
@@ -123,7 +124,7 @@ func (this *RedisClusterCache) Get(key string, data interface{}) bool {
 	}
 
 	if e := this.text.Unmarshal([]byte(s), data); e != nil {
-		log.Warn(e)
+		this.logger.Warn(e)
 		return false
 	}
 	return true
@@ -133,7 +134,7 @@ func (this *RedisClusterCache) Set(key string, data interface{}, ttl int) bool {
 	//转为字符串
 	s, e := this.text.Marshal(data)
 	if e != nil {
-		log.Warn(e)
+		this.logger.Warn(e)
 		return false
 	}
 	//必须配置超时
@@ -152,7 +153,7 @@ func (this *RedisClusterCache) Set(key string, data interface{}, ttl int) bool {
 		go this.publish(key, s, ttl, redis_sync_set)
 		return true
 	}
-	log.Debug("Set key:", key, " err->", status.Err())
+	this.logger.Debug("Set key:", key, " err->", status.Err())
 	return false
 }
 
@@ -160,7 +161,7 @@ func (this *RedisClusterCache) Delete(key string) bool {
 	this.mem.Delete(key)
 	go this.publish(key, "", 0, redis_sync_del)
 	if r := this.cluster.Del(key); r.Err() != nil {
-		log.Debug("delete key:", key, "->", r.Err())
+		this.logger.Debug("delete key:", key, "->", r.Err())
 		return false
 	}
 	return true
