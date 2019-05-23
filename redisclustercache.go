@@ -19,7 +19,7 @@ type RedisClusterCache struct {
 	name     string
 	mem      *MemCache
 	text     TextSerialize
-	logger 	Logger
+	logger   Logger
 }
 
 func newRedisClusterCache(ip string, port int, pass string, db int, poolsize int, text TextSerialize, logger Logger) *RedisClusterCache {
@@ -28,7 +28,7 @@ func newRedisClusterCache(ip string, port int, pass string, db int, poolsize int
 	s.pass = pass
 	s.port = port
 	s.db = db
-	s.logger =logger
+	s.logger = logger
 	s.name = encrypt.GetRandomString(16)
 	s.cli = redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", ip, port),
