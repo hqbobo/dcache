@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/hqbobo/dcache"
+	"fmt"
 )
 
 func main() {
@@ -15,8 +16,10 @@ func main() {
 	})
 	var val string
 	dcache.GetCache().Get("aaaa", &val)
-	dcache.GetCache().Set("aaaa", "bbbb", 100)
-	dcache.GetCache().Get("aaaa", &val)
+	dcache.GetCache().Set("aaaa", "ccccc", 100)
+	if dcache.GetCache().Get("aaaa", &val) {
+		fmt.Println(val)
+	}
 	select {}
 
 }

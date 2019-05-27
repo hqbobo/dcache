@@ -3,6 +3,21 @@ package dcache
 import "encoding/json"
 import "github.com/hqbobo/log"
 
+const (
+	redis_item_timeout = 60 * 60
+	redis_sync_chan    = "sync"
+	redis_sync_set     = 1
+	redis_sync_del     = 2
+)
+
+type publisher struct {
+	From string
+	Act  int
+	Key  string
+	Val  string
+	Ttl  int
+}
+
 type Cache interface {
 	Check(key string) bool
 	CheckMem(key string) bool
@@ -69,6 +84,9 @@ func Init(option Options) {
 
 	if text == nil {
 		text = &defaultText{}
+		log.InitLog(true ,log.AllLevels...)
+		log.SetCode(true)
+		log.SetPathFilter("github.com/hqbobo/")
 	}
 
 	if logger == nil {
@@ -76,14 +94,8 @@ func Init(option Options) {
 	}
 
 	if option.ClusterMode {
-		log.InitLog(log.AllLevels...)
-		log.SetCode(true)
-		log.SetPathFilter("github.com/hqbobo/")
 		cache = newRedisClusterCache(option.Ip, option.Port, option.Pass, option.Db, option.PoolSize, text, logger)
 	} else {
-		log.InitLog(log.AllLevels...)
-		log.SetCode(true)
-		log.SetPathFilter("github.com/hqbobo/")
 		cache = newRedisCache(option.Ip, option.Port, option.Pass, option.Db, option.PoolSize, text, logger)
 	}
 }
